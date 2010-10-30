@@ -144,11 +144,11 @@ som_input_layer_new ( size_t neurons_count )
 		return NULL;
 	}
 	
-	for ( i=0; i < neurons_count; i++ )
+	for ( i=0; i < neurons_count; ++i )
 	{
 		if ( !( layer->neurons[i] = som_neuron_new() ))
 		{
-			for ( j=0; j < i; j++ )
+			for ( j=0; j < i; ++j )
 			{
 				som_neuron_destroy ( layer->neurons[j] );
 				layer->neurons[j] = NULL;
@@ -194,11 +194,11 @@ som_output_layer_new ( size_t neurons_rows, size_t neurons_cols )
 		return NULL;
 	}
 
-	for ( i=0; i < neurons_rows; i++ )
+	for ( i=0; i < neurons_rows; ++i )
 	{
 		if ( !( layer->neurons[i] = ( som_neuron_t** ) malloc ( neurons_cols * sizeof ( som_neuron_t* ))))
 		{
-			for ( j=0; j < i; j++ )
+			for ( j=0; j < i; ++j )
 			{
 				free ( layer->neurons[j] );
 				layer->neurons[j] = NULL;
@@ -210,15 +210,15 @@ som_output_layer_new ( size_t neurons_rows, size_t neurons_cols )
 		}
 	}
 
-	for ( i=0; i < neurons_rows; i++ )
+	for ( i=0; i < neurons_rows; ++i )
 	{
-		for ( j=0; j < neurons_cols; j++ )
+		for ( j=0; j < neurons_cols; ++j )
 		{
 			if ( !( layer->neurons[i][j] = som_neuron_new() ))
 			{
-				for ( k=0; k < i; k++ )
+				for ( k=0; k < i; ++k )
 				{
-					for ( l=0; l < j; l++ )
+					for ( l=0; l < j; ++l )
 					{
 						som_neuron_destroy ( layer->neurons[k][l] );
 						layer->neurons[k][l] = NULL;
@@ -250,11 +250,11 @@ som_connect_layers ( som_input_layer_t **input_layer, som_output_layer_t **outpu
 		  j = 0,
 		  k = 0;
 
-	for ( i=0; i < (*output_layer)->neurons_rows; i++ )
+	for ( i=0; i < (*output_layer)->neurons_rows; ++i )
 	{
-		for ( j=0; j < (*output_layer)->neurons_cols; j++ )
+		for ( j=0; j < (*output_layer)->neurons_cols; ++j )
 		{
-			for ( k=0; k < (*input_layer)->neurons_count; k++ )
+			for ( k=0; k < (*input_layer)->neurons_count; ++k )
 			{
 				if ( !( som_synapsis_new ( (*input_layer)->neurons[k], (*output_layer)->neurons[i][j], 0.0 )))
 				{
@@ -322,9 +322,9 @@ som_input_layer_destroy ( som_network_t *net )
 		return;
 	}
 
-	for ( i=0; i < net->input_layer->neurons_count; i++ )
+	for ( i=0; i < net->input_layer->neurons_count; ++i )
 	{
-		for ( j=0; j < net->input_layer->neurons[i]->synapses_count; j++ )
+		for ( j=0; j < net->input_layer->neurons[i]->synapses_count; ++j )
 		{
 			if ( (int) j < 0 )
 			{
@@ -339,7 +339,7 @@ som_input_layer_destroy ( som_network_t *net )
 					{
 						/* net->input_layer->neurons[i]->synapses[j]->neuron_out->synapses[k]->neuron_in = NULL; */
 
-						for ( k=0; k < net->input_layer->neurons[i]->synapses[j]->neuron_out->synapses_count; k++ )
+						for ( k=0; k < net->input_layer->neurons[i]->synapses[j]->neuron_out->synapses_count; ++k )
 						{
 							if ( net->input_layer->neurons[i]->synapses[j]->neuron_out->synapses[k] )
 							{
@@ -386,11 +386,11 @@ som_output_layer_destroy ( som_network_t *net )
 		return;
 	}
 
-	for ( i=0; i < net->output_layer->neurons_rows; i++ )
+	for ( i=0; i < net->output_layer->neurons_rows; ++i )
 	{
-		for ( j=0; j < net->output_layer->neurons_cols; j++ )
+		for ( j=0; j < net->output_layer->neurons_cols; ++j )
 		{
-			for ( k=0; k < net->output_layer->neurons[i][j]->synapses_count; k++ )
+			for ( k=0; k < net->output_layer->neurons[i][j]->synapses_count; ++k )
 			{
 				if ( net->output_layer->neurons[i][j]->synapses )
 				{
@@ -450,7 +450,7 @@ som_set_inputs ( som_network_t *net, double *data )
 {
 	size_t i = 0;
 
-	for ( i=0; i < net->input_layer->neurons_count; i++ )
+	for ( i=0; i < net->input_layer->neurons_count; ++i )
 	{
 		net->input_layer->neurons[i]->input = data[i];
 	}
@@ -474,13 +474,13 @@ som_get_best_neuron_coordinates ( som_network_t *net, size_t *x, size_t *y )
 	double mod = 0.0,
 		  best_dist = 0.0;
 
-	for ( i=0; i < net->output_layer->neurons_rows; i++ )
+	for ( i=0; i < net->output_layer->neurons_rows; ++i )
 	{
-		for ( j=0; j < net->output_layer->neurons_cols; j++ )
+		for ( j=0; j < net->output_layer->neurons_cols; ++j )
 		{
 			mod = 0.0;
 
-			for ( k=0; k < net->output_layer->neurons[i][j]->synapses_count; k++ )
+			for ( k=0; k < net->output_layer->neurons[i][j]->synapses_count; ++k )
 			{
 				mod += ( net->input_layer->neurons[k]->input - net->output_layer->neurons[i][j]->synapses[k]->weight ) *
 					( net->input_layer->neurons[k]->input - net->output_layer->neurons[i][j]->synapses[k]->weight );
@@ -509,12 +509,14 @@ static double
 lambert_W1_function ( double x, int n )
 {
 	int j = 0,
-	    k = 0;
+		k = 0;
 
 	double *alphas = NULL,
 		  *mus = NULL,
 		  p = 0.0,
-		  res = 0.0;
+		  res = 0.0,
+		  k_plus = 0,
+		  k_less = 0;
 
 	if ( !( alphas = (double*) alloca ( (n+1) * sizeof ( double ))))
 		return 0.0;
@@ -524,27 +526,25 @@ lambert_W1_function ( double x, int n )
 
 	p = - sqrt ( 2 * ( M_E * x + 1 ));
 
-	for ( k=0; k < n; k++ )
+	mus[0] 	  = -1;
+	mus[1] 	  = 1;
+	alphas[0] = 2;
+	alphas[1] = -1;
+	for ( k=2; k < n; ++k )
 	{
-		if ( k == 0 )
+		alphas[k] = 0.0;
+
+		for ( j=2; j < k; ++j )
 		{
-			mus[k] = -1;
-			alphas[k] = 2;
-		} else if ( k == 1 ) {
-			mus[k] = 1;
-			alphas[k] = -1;
-		} else {
-			alphas[k] = 0.0;
-
-			for ( j=2; j < k; j++ )
-			{
-				alphas[k] += mus[j] * mus[k-j+1];
-			}
-
-			mus[k] = ((double) ( k - 1 ) / (double) ( k + 1 )) * ( (mus[k-2] / 2.0) + (alphas[k-2] / 4.0) ) - ( alphas[k] / 2.0 ) - ( mus[k-1] / ((double) k + 1 ));
+			alphas[k] += mus[j] * mus[ k - j + 1 ];
 		}
+		
+		k_plus = k + 1;
+		k_less = k - 1;
 
-		res += ( mus[k] * pow ( p, (double) k ));
+		mus[k] = (k_less / k_plus) * ( (mus[k-2] / 2.0) + (alphas[k-2] / 4.0) ) - ( alphas[k] / 2.0 ) - ( mus[(int)k_less] / k_plus );
+
+		res += ( mus[k] * pow ( p, k ) );
 	}
 
 	return res;
@@ -584,6 +584,21 @@ som_learning_rate ( som_network_t* net, size_t t, double M, size_t N )
 }		/* -----  end of function som_learning_rate  ----- */
 
 /**
+ * \brief  Get the learning rate of a step of the learning process in function of the current iteration number once T_learning_param is set
+ * \param  net 	SOM neural network
+ * \param  t 		Iteration number
+ * \param  M 		Maximum value for the learning rate (in [0:1])
+ * \param  N 		Iteration number after which the function equals the "cutoff" value (0.01), i.e. the learning rate becomes almost meaningless
+ * \return Learning rate
+ */
+
+static double
+som_learning_rate_fast ( som_network_t* net, size_t t, double M, size_t N )
+{
+	return M * ( (double) t / net->T_learning_param) * exp ( 1 - ( (double) t / net->T_learning_param ));
+}		/* -----  end of function som_learning_rate  ----- */
+
+/**
  * \brief  Training iteration for the network given a single input data set
  * \param  net 	SOM neural network
  * \param  data 	Input data
@@ -598,26 +613,28 @@ som_train_iteration ( som_network_t *net, double *data, size_t iter )
 		  i = 0,
 		  j = 0,
 		  k = 0,
-		  dist = 0;
+		  dist = 0,
+		  dist_i;
 
-	double l_rate = 0.0;
+	double l_rate = 0.0,
+		   inv_dist;
 
-	l_rate = som_learning_rate ( net, iter, 0.8, 200 );
+	l_rate = som_learning_rate_fast ( net, iter, 0.8, 200 );
 	som_set_inputs ( net, data );
 	som_get_best_neuron_coordinates ( net, &x, &y );
 
-	for ( i=0; i < net->output_layer->neurons_rows; i++ )
+	som_neuron_t *neuron;
+	for ( i=0; i < net->output_layer->neurons_rows; ++i )
 	{
-		for ( j=0; j < net->output_layer->neurons_cols; j++ )
+		dist_i = abs( x - i );
+		for ( j=0; j < net->output_layer->neurons_cols; ++j )
 		{
-			dist = abs ( x-i ) + abs ( y-j );
-			dist = dist * dist * dist * dist;
-
-			for ( k=0; k < net->input_layer->neurons_count; k++ )
+			dist     = pow( dist_i + abs ( y - j ), 4 );
+			inv_dist = (1.0 / ((double) dist + 1)) * l_rate;
+			neuron   = net->output_layer->neurons[i][j];
+			for ( k=0; k < net->input_layer->neurons_count; ++k )
 			{
-				net->output_layer->neurons[i][j]->synapses[k]->weight +=
-					(( 1.0 / ((double) dist + 1) ) *
-					  l_rate * ( net->input_layer->neurons[k]->input - net->output_layer->neurons[i][j]->synapses[k]->weight ));
+				neuron->synapses[k]->weight += inv_dist * ( net->input_layer->neurons[k]->input - neuron->synapses[k]->weight );
 			}
 		}
 	}
@@ -655,15 +672,15 @@ som_init_weights ( som_network_t *net, double **data, size_t n_data )
 	}
 
 	/* Find the couple of data sets with the maximum distance */
-	for ( i=0; i < n_data; i++ )
+	for ( i=0; i < n_data; ++i )
 	{
-		for ( j=0; j < n_data; j++ )
+		for ( j=0; j < n_data; ++j )
 		{
 			if ( i != j )
 			{
 				dist = 0.0;
 
-				for ( k=0; k < net->input_layer->neurons_count; k++ )
+				for ( k=0; k < net->input_layer->neurons_count; ++k )
 				{
 					dist += fabs ( data[i][k] - data[j][k] );
 				}
@@ -679,28 +696,32 @@ som_init_weights ( som_network_t *net, double **data, size_t n_data )
 	}
 
 	/* Compute the avg_data vector as the vector containing the average values of (data[max_i], data[max_j]) */
-	for ( i=0; i < net->input_layer->neurons_count; i++ )
+	double *max_i_row = data[max_i],
+	       *max_j_row = data[max_j];
+	for ( i=0; i < net->input_layer->neurons_count; ++i )
 	{
-		avg_data[i] = fabs ( data[max_i][i] + data[max_j][i] ) / 2.0;
+		avg_data[i] = fabs ( max_i_row[i] + max_j_row[i] ) / 2.0;
 	}
 
 	/* Initialize the upper-right and bottom-left vertex of the output matrix with these values */
-	for ( i=0; i < net->input_layer->neurons_count; i++ )
+	som_neuron_t *ur_neuron = net->output_layer->neurons[0][ net->output_layer->neurons_cols - 1 ],
+				 *bl_neuron = net->output_layer->neurons[ net->output_layer->neurons_rows - 1 ][0];
+	for ( i=0; i < net->input_layer->neurons_count; ++i )
 	{
-		net->output_layer->neurons[0][ net->output_layer->neurons_cols - 1 ]->synapses[i]->weight = data[max_i][i];
-		net->output_layer->neurons[ net->output_layer->neurons_rows - 1 ][0]->synapses[i]->weight = data[max_j][i];
+		ur_neuron->synapses[i]->weight = max_i_row[i];
+		bl_neuron->synapses[i]->weight = max_j_row[i];
 	}
 
 	/* Find the vector having the maximum distance from the maximum distance vectors */
 	max_dist = DBL_MAX;
 
-	for ( i=0; i < n_data; i++ )
+	for ( i=0; i < n_data; ++i )
 	{
 		if ( i != max_i && i != max_j )
 		{
 			dist = 0.0;
 
-			for ( k=0; k < net->input_layer->neurons_count; k++ )
+			for ( k=0; k < net->input_layer->neurons_count; ++k )
 			{
 				dist += fabs ( data[i][k] - avg_data[i] );
 
@@ -712,29 +733,32 @@ som_init_weights ( som_network_t *net, double **data, size_t n_data )
 			}
 		}
 	}
+	
+	double *med_i_row = data[medium_i];
 
 	/* Initialize the upper-left corner with the values of this vector */
-	for ( i=0; i < net->input_layer->neurons_count; i++ )
+	som_neuron_t *ul_neuron = net->output_layer->neurons[0][0];
+	for ( i=0; i < net->input_layer->neurons_count; ++i )
 	{
-		net->output_layer->neurons[0][0]->synapses[i]->weight = data[medium_i][i];
+		ul_neuron->synapses[i]->weight = med_i_row[i];
 	}
 
 	/* avg_data contains the average values of the 3 vectors computed above */
-	for ( i=0; i < net->input_layer->neurons_count; i++ )
+	for ( i=0; i < net->input_layer->neurons_count; ++i )
 	{
-		avg_data[i] = fabs ( data[max_i][i] + data[max_j][i] + data[medium_i][i] ) / 3.0;
+		avg_data[i] = fabs ( max_i_row[i] + max_j_row[i] + med_i_row[i] ) / 3.0;
 	}
 
 	/* Find the vector having the maximum distance from the 3 vectors above */
 	max_dist = DBL_MAX;
 
-	for ( i=0; i < n_data; i++ )
+	for ( i=0; i < n_data; ++i )
 	{
 		if ( i != max_i && i != max_j && i != medium_i )
 		{
 			dist = 0.0;
 
-			for ( k=0; k < net->input_layer->neurons_count; k++ )
+			for ( k=0; k < net->input_layer->neurons_count; ++k )
 			{
 				dist += fabs ( data[i][k] - avg_data[i] );
 
@@ -746,11 +770,14 @@ som_init_weights ( som_network_t *net, double **data, size_t n_data )
 			}
 		}
 	}
+	
+	double *med_j_row = data[medium_j];
 
 	/* Initialize the bottom-right corner with the values of this vector */
-	for ( i=0; i < net->input_layer->neurons_count; i++ )
+	som_neuron_t *br_neuron = net->output_layer->neurons[ net->output_layer->neurons_rows - 1 ][ net->output_layer->neurons_cols - 1 ];
+	for ( i=0; i < net->input_layer->neurons_count; ++i )
 	{
-		net->output_layer->neurons[ net->output_layer->neurons_rows - 1 ][ net->output_layer->neurons_cols - 1 ]->synapses[i]->weight = data[medium_j][i];
+		br_neuron->synapses[i]->weight = med_j_row[i];
 	}
 
 	/* Initialize the weights on the 4 edges */
@@ -758,19 +785,26 @@ som_init_weights ( som_network_t *net, double **data, size_t n_data )
 	out_cols = net->output_layer->neurons_cols;
 	in_size  = net->input_layer->neurons_count;
 
-	for ( j=1; j < out_cols - 1; j++ )
+	som_neuron_t **edges = net->output_layer->neurons[0];
+	size_t		   last_out_col = out_cols - 1,
+				   span_cols;
+	double		   a, b;
+	for ( j=1; j < out_cols - 1; ++j )
 	{
-		for ( k=0; k < in_size; k++ )
+		span_cols = out_cols - j;
+		a		  = ( (double)(j - 1) / last_out_col );
+		b		  = ( (double)span_cols / (double)last_out_col );
+		for ( k=0; k < in_size; ++k )
 		{
-			net->output_layer->neurons[0][j]->synapses[k]->weight =
-				( ((double) j - 1) / ( out_cols - 1 )) * net->output_layer->neurons[0][ out_cols - 1 ]->synapses[k]->weight +
-				( (double) ( out_cols - j ) / ((double) out_cols - 1 )) * net->output_layer->neurons[0][0]->synapses[k]->weight;
+			edges[j]->synapses[k]->weight =
+				a * edges[ last_out_col ]->synapses[k]->weight +
+				b * ul_neuron->synapses[k]->weight;
 		}
 	}
 
-	for ( j=1; j < out_cols - 1; j++ )
+	for ( j=1; j < out_cols - 1; ++j )
 	{
-		for ( k=0; k < in_size; k++ )
+		for ( k=0; k < in_size; ++k )
 		{
 			net->output_layer->neurons[ out_rows - 1 ][j]->synapses[k]->weight =
 				( ((double) j - 1) / ((double) out_cols - 1 )) * net->output_layer->neurons[ out_rows - 1 ][ out_cols - 1 ]->synapses[k]->weight +
@@ -778,9 +812,9 @@ som_init_weights ( som_network_t *net, double **data, size_t n_data )
 		}
 	}
 
-	for ( i=1; i < out_rows - 1; i++ )
+	for ( i=1; i < out_rows - 1; ++i )
 	{
-		for ( k=0; k < in_size; k++ )
+		for ( k=0; k < in_size; ++k )
 		{
 			net->output_layer->neurons[i][0]->synapses[k]->weight =
 				( ((double) i - 1) / ((double) out_rows - 1 )) * net->output_layer->neurons[ out_rows-1 ][0]->synapses[k]->weight +
@@ -788,9 +822,9 @@ som_init_weights ( som_network_t *net, double **data, size_t n_data )
 		}
 	}
 
-	for ( i=1; i < out_rows - 1; i++ )
+	for ( i=1; i < out_rows - 1; ++i )
 	{
-		for ( k=0; k < in_size; k++ )
+		for ( k=0; k < in_size; ++k )
 		{
 			net->output_layer->neurons[i][ out_cols - 1 ]->synapses[k]->weight =
 				( ((double) i - 1) / ((double) out_rows - 1 )) * net->output_layer->neurons[ out_rows - 1 ][ out_cols - 1 ]->synapses[k]->weight +
@@ -799,11 +833,11 @@ som_init_weights ( som_network_t *net, double **data, size_t n_data )
 	}
 
 	/* Initialize the weights in the middle of the matrix */
-	for ( i=1; i < out_rows - 1; i++ )
+	for ( i=1; i < out_rows - 1; ++i )
 	{
-		for ( j=1; j < out_cols - 1; j++ )
+		for ( j=1; j < out_cols - 1; ++j )
 		{
-			for ( k=0; k < in_size; k++ )
+			for ( k=0; k < in_size; ++k )
 			{
 				net->output_layer->neurons[i][j]->synapses[k]->weight =
 					( (((double) j - 1)*((double) i - 1)) / (((double) out_rows - 1)*((double) out_cols - 1))) * net->output_layer->neurons[ out_rows - 1 ][ out_cols - 1 ]->synapses[k]->weight +
@@ -830,10 +864,12 @@ som_train ( som_network_t *net, double **data, size_t n_data, size_t iter )
 		  k = 0,
 		  x = 0,
 		  y = 0;
+		
+	som_learning_rate( net, iter, 0.8, 200 );
 
-	for ( n=0; n < n_data; n++ )
+	for ( n=0; n < n_data; ++n )
 	{
-		for ( k=1; k <= iter; k++ )
+		for ( k=1; k <= iter; ++k )
 		{
 			som_train_iteration ( net, data[n], k );
 
@@ -869,11 +905,11 @@ som_serialize ( som_network_t *net, const char *fname )
 	fwrite ( &(net->output_layer->neurons_rows), sizeof ( size_t ), 1, fp );
 	fwrite ( &(net->output_layer->neurons_cols), sizeof ( size_t ), 1, fp );
 
-	for ( i=0; i < net->output_layer->neurons_rows; i++ )
+	for ( i=0; i < net->output_layer->neurons_rows; ++i )
 	{
-		for ( j=0; j < net->output_layer->neurons_cols; j++ )
+		for ( j=0; j < net->output_layer->neurons_cols; ++j )
 		{
-			for ( k=0; k < net->output_layer->neurons[i][j]->synapses_count; k++ )
+			for ( k=0; k < net->output_layer->neurons[i][j]->synapses_count; ++k )
 			{
 				fwrite ( &(net->output_layer->neurons[i][j]->synapses[k]->weight), sizeof ( double ), 1, fp );
 			}
@@ -933,11 +969,11 @@ som_deserialize ( const char* fname )
 		return NULL;
 	}
 
-	for ( i=0; i < output_neurons_rows; i++ )
+	for ( i=0; i < output_neurons_rows; ++i )
 	{
-		for ( j=0; j < output_neurons_cols; j++ )
+		for ( j=0; j < output_neurons_cols; ++j )
 		{
-			for ( k=0; k < input_neurons; k++ )
+			for ( k=0; k < input_neurons; ++k )
 			{
 				fread ( &weight, sizeof ( double ), 1, fp );
 
