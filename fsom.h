@@ -11,6 +11,7 @@
  *       Compiler:  gcc
  *
  *         Author:  BlackLight (http://0x00.ath.cx), <blacklight@autistici.org>
+ *    Contributor:  evilsocket (http://www.evilsocket.net), <evilsocket@gmail.com>
  *        Licence:  GNU GPL v.3
  *        Company:  DO WHAT YOU WANT CAUSE A PIRATE IS FREE, YOU ARE A PIRATE!
  *
@@ -23,37 +24,51 @@
 #include	<stddef.h>
 #include	<time.h>
 
+#define TAYLOR_LAMBERT_ELEMENTS 	1001
+#define TAYLOR_LAMBERT_LAST_ELEMENT 1000
+
+#ifndef INLINE
+#	define INLINE __inline__ __attribute__((always_inline))
+#endif
+
 typedef struct  {
 	double                 output;
 	double                 input;
 
 	struct som_synapsis_s  **synapses;
 	size_t                 synapses_count;
-} som_neuron_t;
+} som_neuron_t
+__attribute__ ((aligned));;
 
 typedef struct som_synapsis_s  {
 	som_neuron_t    *neuron_in;
 	som_neuron_t    *neuron_out;
 	double          weight;
-} som_synapsis_t;
+} som_synapsis_t
+__attribute__ ((aligned));
 
 typedef struct  {
 	som_neuron_t    **neurons;
 	size_t          neurons_count;
-} som_input_layer_t;
+} som_input_layer_t
+__attribute__ ((aligned));
 
 typedef struct  {
 	som_neuron_t    ***neurons;
 	size_t          neurons_rows;
 	size_t          neurons_cols;
-} som_output_layer_t;
+} som_output_layer_t
+__attribute__ ((aligned));
 
 typedef struct  {
 	som_input_layer_t   *input_layer;
 	som_output_layer_t  *output_layer;
 	double              T_learning_param;
 	time_t              serialization_time;
-} som_network_t;
+	double				alphas[TAYLOR_LAMBERT_ELEMENTS];
+	double			    mus[TAYLOR_LAMBERT_ELEMENTS];
+} som_network_t
+__attribute__ ((aligned));
 
 void                 som_network_destroy ( som_network_t* );
 void                 som_set_inputs ( som_network_t*, double* );

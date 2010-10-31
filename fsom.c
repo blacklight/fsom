@@ -11,6 +11,7 @@
  *       Compiler:  gcc
  *
  *         Author:  BlackLight (http://0x00.ath.cx), <blacklight@autistici.org>
+ *    Contributor:  evilsocket (http://www.evilsocket.net), <evilsocket@gmail.com>
  *        Licence:  GNU GPL v.3
  *        Company:  DO WHAT YOU WANT CAUSE A PIRATE IS FREE, YOU ARE A PIRATE!
  *
@@ -81,41 +82,15 @@ som_synapsis_new ( som_neuron_t *input_neuron, som_neuron_t *output_neuron, doub
  * \brief  Create a new neuron
  * \return The new neuron
  */
-
-static som_neuron_t*
-som_neuron_new ()
-{
-	som_neuron_t  *neuron = NULL;
-
-	if ( !( neuron = ( som_neuron_t* ) malloc ( sizeof ( som_neuron_t ))))
-	{
-		return NULL;
-	}
-
-	neuron->output = 0.0;
-	neuron->input  = 0.0;
-	neuron->synapses = NULL;
-	neuron->synapses_count = 0;
-
-	return neuron;
-}		/* -----  end of function som_neuron_new  ----- */
+#define som_neuron_new() ( som_neuron_t *)calloc( 1, sizeof ( som_neuron_t ) )
+/* -----  end of macro som_neuron_new  ----- */
 
 /**
  * \brief  Deallocate a neuron
  * \param  neuron 	Neuron to be deallocated
  */
-
-static void
-som_neuron_destroy ( som_neuron_t *neuron )
-{
-	if ( !neuron )
-	{
-		return;
-	}
-
-	free ( neuron );
-	neuron = NULL;
-}		/* -----  end of function som_neuron_destroy  ----- */
+#define som_neuron_destroy( neuron ) if( neuron ){ free(neuron); neuron = NULL; }
+/* -----  end of macro som_neuron_destroy  ----- */
 
 /**
  * \brief  Create a new input layer
@@ -151,7 +126,6 @@ som_input_layer_new ( size_t neurons_count )
 			for ( j=0; j < i; ++j )
 			{
 				som_neuron_destroy ( layer->neurons[j] );
-				layer->neurons[j] = NULL;
 			}
 
 			free ( layer->neurons );
@@ -221,7 +195,6 @@ som_output_layer_new ( size_t neurons_rows, size_t neurons_cols )
 					for ( l=0; l < j; ++l )
 					{
 						som_neuron_destroy ( layer->neurons[k][l] );
-						layer->neurons[k][l] = NULL;
 					}
 
 					free ( layer->neurons[k] );
@@ -279,12 +252,10 @@ som_network_new ( size_t input_neurons, size_t output_neurons_rows, size_t outpu
 	som_network_t *net = NULL;
 	srand ( time ( NULL ));
 
-	if ( !( net = ( som_network_t* ) malloc ( sizeof ( som_network_t ))))
+	if ( !( net = ( som_network_t* ) calloc ( 1, sizeof ( som_network_t ))))
 	{
 		return NULL;
 	}
-
-	memset ( net, 0, sizeof ( som_network_t ));
 
 	if ( !( net->input_layer = som_input_layer_new ( input_neurons )))
 	{
@@ -359,7 +330,6 @@ som_input_layer_destroy ( som_network_t *net )
 		}
 
 		som_neuron_destroy ( net->input_layer->neurons[i] );
-		net->input_layer->neurons[i] = NULL;
 	}
 
 	free ( net->input_layer->neurons );
@@ -406,7 +376,6 @@ som_output_layer_destroy ( som_network_t *net )
 			}
 
 			som_neuron_destroy ( net->output_layer->neurons[i][j] );
-			net->output_layer->neurons[i][j] = NULL;
 		}
 
 		free ( net->output_layer->neurons[i] );
@@ -468,25 +437,27 @@ double
 som_get_best_neuron_coordinates ( som_network_t *net, size_t *x, size_t *y )
 {
 	size_t i = 0,
-		  j = 0,
-		  k = 0;
+		   j = 0,
+		   k = 0;
 
-	double mod = 0.0,
-		  best_dist = 0.0;
+	double mod 		 = 0.0,
+		   best_dist = DBL_MAX;
+
+	som_neuron_t *neuron;
 
 	for ( i=0; i < net->output_layer->neurons_rows; ++i )
 	{
 		for ( j=0; j < net->output_layer->neurons_cols; ++j )
 		{
-			mod = 0.0;
+			mod    = 0.0;
+			neuron = net->output_layer->neurons[i][j];
 
-			for ( k=0; k < net->output_layer->neurons[i][j]->synapses_count; ++k )
+			for ( k=0; k < neuron->synapses_count; ++k )
 			{
-				mod += ( net->input_layer->neurons[k]->input - net->output_layer->neurons[i][j]->synapses[k]->weight ) *
-					( net->input_layer->neurons[k]->input - net->output_layer->neurons[i][j]->synapses[k]->weight );
+				mod += pow( net->input_layer->neurons[k]->input - neuron->synapses[k]->weight, 2 );
 			}
 
-			if (( i == 0 && j == 0 ) || ( mod < best_dist ))
+			if ( mod < best_dist )
 			{
 				best_dist = mod;
 				*x = i;
@@ -501,50 +472,44 @@ som_get_best_neuron_coordinates ( som_network_t *net, size_t *x, size_t *y )
 /**
  * \brief  Get the n-th approximated step of the analytic continuation of the Lambert W-function of a real number x (see "Numerical Evaluation of the Lambert W Function and Application to Generation of Generalized Gaussian Noise With Exponent 1/2" from Chapeau-Blondeau and Monir, IEEE Transactions on Signal Processing, vol.50, no.9, Sep.2002)
  * \param  x 	Input variable of which we're going to compute W[-1](x)
- * \param  n 	Number of steps in the series computation
  * \return W[-1](x)
  */
 
 static double
-lambert_W1_function ( double x, int n )
+lambert_W1_function ( som_network_t *net, double x )
 {
 	int j = 0,
 		k = 0;
 
-	double *alphas = NULL,
-		  *mus = NULL,
-		  p = 0.0,
-		  res = 0.0,
-		  k_plus = 0,
-		  k_less = 0;
-
-	if ( !( alphas = (double*) alloca ( (n+1) * sizeof ( double ))))
-		return 0.0;
-
-	if ( !( mus = (double*) alloca ( (n+1) * sizeof ( double ))))
-		return 0.0;
+	double p = 0.0,
+		   res = 0.0,
+		   k_plus = 0,
+		   k_less = 0;
 
 	p = - sqrt ( 2 * ( M_E * x + 1 ));
 
-	mus[0] 	  = -1;
-	mus[1] 	  = 1;
-	alphas[0] = 2;
-	alphas[1] = -1;
-	for ( k=2; k < n; ++k )
+	net->mus[0]    = -1;
+	net->mus[1]    = 1;
+	net->alphas[0] = 2;
+	net->alphas[1] = -1;
+	for ( k=2; k < TAYLOR_LAMBERT_LAST_ELEMENT; ++k )
 	{
-		alphas[k] = 0.0;
+		net->alphas[k] = 0.0;
 
 		for ( j=2; j < k; ++j )
 		{
-			alphas[k] += mus[j] * mus[ k - j + 1 ];
+			net->alphas[k] += net->mus[j] * net->mus[ k - j + 1 ];
 		}
 		
 		k_plus = k + 1;
 		k_less = k - 1;
 
-		mus[k] = (k_less / k_plus) * ( (mus[k-2] / 2.0) + (alphas[k-2] / 4.0) ) - ( alphas[k] / 2.0 ) - ( mus[(int)k_less] / k_plus );
+		net->mus[k] = (k_less / k_plus) *
+					  ( (net->mus[k-2] / 2.0) + ( net->alphas[k-2] / 4.0) ) -
+					  ( net->alphas[k] / 2.0 ) -
+					  ( net->mus[(int)k_less] / k_plus );
 
-		res += ( mus[k] * pow ( p, k ) );
+		res += ( net->mus[k] * pow ( p, k ) );
 	}
 
 	return res;
@@ -572,7 +537,7 @@ som_learning_rate ( som_network_t* net, size_t t, double M, size_t N )
 	{
 		K = ( M * (double) N * M_E ) / 0.01;
 		W_arg = -((double) N ) / K;
-		W = lambert_W1_function ( W_arg, 1000 );
+		W = lambert_W1_function ( net, W_arg );
 		T = K * exp ( W );
 		net->T_learning_param = T;
 	} else {
@@ -592,10 +557,11 @@ som_learning_rate ( som_network_t* net, size_t t, double M, size_t N )
  * \return Learning rate
  */
 
-static double
+INLINE double
 som_learning_rate_fast ( som_network_t* net, size_t t, double M, size_t N )
 {
-	return M * ( (double) t / net->T_learning_param) * exp ( 1 - ( (double) t / net->T_learning_param ));
+	double inv_lrate = (double) t / net->T_learning_param;
+	return M * inv_lrate * exp ( 1 - inv_lrate );
 }		/* -----  end of function som_learning_rate  ----- */
 
 /**
@@ -802,48 +768,80 @@ som_init_weights ( som_network_t *net, double **data, size_t n_data )
 		}
 	}
 
+	size_t		 last_out_row = out_rows - 1;
+	som_neuron_t *j_neuron,
+				 *br_edge = net->output_layer->neurons[ last_out_row  ][ last_out_col ],
+				 *bl_edge = net->output_layer->neurons[ last_out_row ][0];
 	for ( j=1; j < out_cols - 1; ++j )
 	{
+		j_neuron  = net->output_layer->neurons[last_out_row][j];
+		a		  = (double)(j - 1)		   / (double)last_out_col;
+		b		  = (double)(out_cols - j) / (double)last_out_col;
+
 		for ( k=0; k < in_size; ++k )
 		{
-			net->output_layer->neurons[ out_rows - 1 ][j]->synapses[k]->weight =
-				( ((double) j - 1) / ((double) out_cols - 1 )) * net->output_layer->neurons[ out_rows - 1 ][ out_cols - 1 ]->synapses[k]->weight +
-				( (double) ( out_cols - j ) / ((double) out_cols - 1 )) * net->output_layer->neurons[ out_rows - 1 ][0]->synapses[k]->weight;
+			j_neuron->synapses[k]->weight = a * br_edge->synapses[k]->weight + b * bl_edge->synapses[k]->weight;
 		}
 	}
 
+	som_neuron_t *i_neuron,
+				 *tl_edge = net->output_layer->neurons[0][0];
 	for ( i=1; i < out_rows - 1; ++i )
 	{
+		i_neuron = net->output_layer->neurons[i][0];
+		a		 = ( ((double) i - 1) / (double) last_out_row );
+		b		 = ( (double) ( out_rows - i ) /  (double)last_out_row);
 		for ( k=0; k < in_size; ++k )
 		{
-			net->output_layer->neurons[i][0]->synapses[k]->weight =
-				( ((double) i - 1) / ((double) out_rows - 1 )) * net->output_layer->neurons[ out_rows-1 ][0]->synapses[k]->weight +
-				( (double) ( out_rows - i ) / ((double) out_rows - 1 )) * net->output_layer->neurons[0][0]->synapses[k]->weight;
+			i_neuron->synapses[k]->weight = a * bl_edge->synapses[k]->weight + b * tl_edge->synapses[k]->weight;
 		}
 	}
 
+	som_neuron_t *tr_edge = net->output_layer->neurons[0][ last_out_col ];
 	for ( i=1; i < out_rows - 1; ++i )
 	{
+		i_neuron = net->output_layer->neurons[i][ last_out_col ];
+		a		 = ( ((double) i - 1) / ((double) last_out_row ));
+		b		 = ( (double) ( out_rows - i ) / ((double) last_out_row ));
 		for ( k=0; k < in_size; ++k )
 		{
-			net->output_layer->neurons[i][ out_cols - 1 ]->synapses[k]->weight =
-				( ((double) i - 1) / ((double) out_rows - 1 )) * net->output_layer->neurons[ out_rows - 1 ][ out_cols - 1 ]->synapses[k]->weight +
-				( (double) ( out_rows - i ) / ((double) out_rows - 1 )) * net->output_layer->neurons[0][ out_cols - 1 ]->synapses[k]->weight;
+			i_neuron->synapses[k]->weight = a * br_edge->synapses[k]->weight + b * tr_edge->synapses[k]->weight;
 		}
 	}
 
 	/* Initialize the weights in the middle of the matrix */
+	som_neuron_t *ij_neuron;
+	double		  sqr_index = (double) last_out_row  * (double) last_out_col,
+				  prev_i,
+				  prev_j,
+				  prev_out_rows,
+				  prev_out_cols,
+				  c,
+				  d;
 	for ( i=1; i < out_rows - 1; ++i )
 	{
+		prev_i 		  = i - 1;
+		prev_out_rows = out_rows - i;
 		for ( j=1; j < out_cols - 1; ++j )
 		{
+			prev_j	  	  = j - 1;
+			ij_neuron 	  = net->output_layer->neurons[i][j];
+			prev_out_cols = out_cols - j;
+			a		  	  = ( prev_j * prev_i ) / sqr_index;
+			b	   	  	  = ( prev_j * prev_out_rows ) / sqr_index;
+			c		  	  = ( prev_out_cols * prev_i ) / sqr_index;
+			d		 	  = ( prev_out_cols * prev_out_rows ) / sqr_index;
 			for ( k=0; k < in_size; ++k )
 			{
-				net->output_layer->neurons[i][j]->synapses[k]->weight =
-					( (((double) j - 1)*((double) i - 1)) / (((double) out_rows - 1)*((double) out_cols - 1))) * net->output_layer->neurons[ out_rows - 1 ][ out_cols - 1 ]->synapses[k]->weight +
-					( (((double) j - 1)*(double) (out_rows - i)) / (((double) out_rows - 1)*((double) out_cols - 1))) * net->output_layer->neurons[0][ out_cols - 1 ]->synapses[k]->weight +
-					( ((double) (out_cols - j)*((double) i - 1)) / (((double) out_rows - 1)*((double) out_cols - 1))) * net->output_layer->neurons[ out_rows - 1 ][0]->synapses[k]->weight +
-					( ((double) (out_cols - j)*(double) (out_rows - i)) / (((double) out_rows - 1)*((double) out_cols - 1))) * net->output_layer->neurons[0][0]->synapses[k]->weight;
+				ij_neuron->synapses[k]->weight =
+					a *
+					br_edge->synapses[k]->weight +
+					b *
+					tr_edge->synapses[k]->weight +
+					c *
+					bl_edge->synapses[k]->weight +
+					d *
+					tl_edge->synapses[k]->weight;
 			}
 		}
 	}
@@ -943,12 +941,10 @@ som_deserialize ( const char* fname )
 		return NULL;
 	}
 
-	if ( !( net = ( som_network_t* ) malloc ( sizeof ( som_network_t ))))
+	if ( !( net = ( som_network_t* ) calloc ( 1, sizeof ( som_network_t ))))
 	{
 		return NULL;
 	}
-
-	memset ( net, 0, sizeof ( som_network_t ));
 
 	fread ( &(net->serialization_time), sizeof ( time_t ), 1, fp );
 	fread ( &(net->T_learning_param ), sizeof ( double ), 1, fp );
