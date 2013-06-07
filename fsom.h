@@ -10,7 +10,7 @@
  *       Revision:  none
  *       Compiler:  gcc
  *
- *         Author:  BlackLight (http://0x00.ath.cx), <blacklight@autistici.org>
+ *         Author:  BlackLight (http://blacklight.gotdns.org), <blacklight@autistici.org>
  *    Contributor:  evilsocket (http://www.evilsocket.net), <evilsocket@gmail.com>
  *        Licence:  BSD-3
  *
